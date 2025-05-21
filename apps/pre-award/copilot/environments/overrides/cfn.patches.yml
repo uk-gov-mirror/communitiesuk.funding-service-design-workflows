@@ -19,3 +19,16 @@
   value: 
     - EventType: viewer-request 
       FunctionARN: !ImportValue CommunitiesRedirectArn
+
+- op: add
+  path: /Resources/ShieldAdvancedProtection
+  value:
+    Type: "AWS::Shield::Protection"
+    Properties:
+      Name: CloudFrontShieldProtection
+      ResourceArn: !Join
+      - ''
+      - - 'arn:aws:cloudfront::'
+        - !Ref 'AWS::AccountId'
+        - ':distribution/'
+        - !Ref CloudFrontDistribution
