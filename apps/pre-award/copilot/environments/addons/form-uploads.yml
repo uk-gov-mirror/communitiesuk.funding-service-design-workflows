@@ -25,6 +25,8 @@ Resources:
     Properties:
       AccessControl: Private
       BucketName: !Sub fsd-form-uploads-${Env}
+      VersioningConfiguration:
+        Status: Enabled
       BucketEncryption:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
