@@ -262,7 +262,61 @@ jobs:
           repository: communitiesuk/funding-service-design-performance-tests
           path: ./funding-service-design-performance-tests
           token: ${{ steps.generate_token.outputs.token }}
-      - name: 'Set unique id'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run performance tests
+        run: npm run test
+        env:
+          ENVIRONMENT: ${{ inputs.env_name }}
+          BASIC_AUTH_USERNAME: ${{ secrets.FS_BASIC_AUTH_USERNAME }}
+          BASIC_AUTH_PASSWORD: ${{ secrets.FS_BASIC_AUTH_PASSWORD }}
+
+  list_e2e_test_data:
+    name: List E2E test data
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    environment: ${{ inputs.env_name }}
+    if: always() && inputs.env_name == 'dev'
+    needs: [run_application_e2e_test, run_python_e2e_test, run_assessment_e2e_test, run_performance_tests]
+    steps:
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/GithubCopilotDeploy
+          role-session-name: "e2e-cleanup-${{ inputs.env_name }}-${{ github.run_id }}"
+          aws-region: eu-west-2
+
+      - name: Install AWS Copilot CLI
+        shell: bash
+        run: |
+          curl -Lo aws-copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x aws-copilot && sudo mv aws-copilot /usr/local/bin/copilot
+
+      - name: List E2E test data
+        run: |
+          copilot task run --app pre-award --env ${{ inputs.env_name }} \
+            --image public.ecr.aws/docker/library/python:3.11-slim \
+            --command 'sh -c "
+          pip install psycopg2-binary
+          cat <<EOF > list_e2e.py
+          import psycopg2, os
+          conn = psycopg2.connect(os.environ[\"DATABASE_URL\"])
+          cur = conn.cursor()
+          
+          cur.execute(\"SELECT COUNT(*) FROM applications WHERE (project_name ILIKE %s OR project_name ILIKE %s OR project_name ILIKE %s)\", (\"%e2e%\", \"%Project e2e%\", \"%Community Ownership Fund E2E Journey%\"))
+          apps = cur.fetchone()[0]
+          
+          cur.execute(\"SELECT COUNT(*) FROM assessment_records WHERE (project_name ILIKE %s OR project_name ILIKE %s OR project_name ILIKE %s)\", (\"%e2e%\", \"%Project e2e%\", \"%Community Ownership Fund E2E Journey%\"))
+          assessments = cur.fetchone()[0]
+          
+          print(f\"Found {apps} E2E applications and {assessments} E2E assessment records\")
+          print(\"E2E data listing completed - no data deleted\")
+          conn.close()
+          EOF
+          python list_e2e.py
+          "' \
+            --env-vars DATABASE_URL=$DATABASE_URLame: 'Set unique id'
         id: unique_id
         run: |
           echo "unique_id=$(date +%s)" >> $GITHUB_OUTPUT
