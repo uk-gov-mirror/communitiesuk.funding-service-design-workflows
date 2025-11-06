@@ -170,7 +170,7 @@ jobs:
           enable-cache: true
       - name: Install playwright browsers
         # working-directory: funding-service-design-e2e-checks
-        run: uv run --python 3.13 playwright install --with-deps chromium
+        run: uv run --frozen playwright install --with-deps chromium
 
       - name: Run tests
         working-directory: ./funding-service-design-e2e-checks/tests
