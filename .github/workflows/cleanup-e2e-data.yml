@@ -9,6 +9,10 @@ on:
     secrets:
       AWS_ACCOUNT:
         required: true
+      FS_BASIC_AUTH_USERNAME:
+        required: true
+      FS_BASIC_AUTH_PASSWORD:
+        required: true
 
 jobs:
   cleanup_e2e_data:
@@ -28,20 +32,17 @@ jobs:
         role-session-name: "cleanup-e2e-${{ inputs.env_name }}-${{ github.run_id }}"
         aws-region: eu-west-2
 
-    - name: Install AWS Copilot CLI
-      run: |
-        curl -Lo aws-copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x aws-copilot && sudo mv aws-copilot /usr/local/bin/copilot
-
     - name: Cleanup E2E test data
       run: |
         echo "Cleaning up E2E test data in ${{ inputs.env_name }} environment..."
         
-        # Get the service URL
-        SERVICE_URL=$(copilot svc show --app pre-award --name fsd-pre-award --env ${{ inputs.env_name }} --json | jq -r '.routes[0].url')
+        # Use dev environment URL pattern
+        SERVICE_URL="https://apply.access-funding.${{ inputs.env_name }}.communities.gov.uk"
         
-        # Call the cleanup endpoint
+        # Call the cleanup endpoint with basic auth
         RESPONSE=$(curl -s -X POST "${SERVICE_URL}/utils/cleanup-e2e-data" \
           -H "Content-Type: application/json" \
+          -u "${{ secrets.FS_BASIC_AUTH_USERNAME }}:${{ secrets.FS_BASIC_AUTH_PASSWORD }}" \
           -w "HTTP_STATUS:%{http_code}")
         
         HTTP_STATUS=$(echo $RESPONSE | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)

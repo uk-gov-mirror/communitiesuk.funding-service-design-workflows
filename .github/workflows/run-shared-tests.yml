@@ -299,6 +299,8 @@ jobs:
       env_name: ${{ inputs.env_name }}
     secrets:
       AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+      FS_BASIC_AUTH_USERNAME: ${{ secrets.FS_BASIC_AUTH_USERNAME }}
+      FS_BASIC_AUTH_PASSWORD: ${{ secrets.FS_BASIC_AUTH_PASSWORD }}
 
 
 # Commented out as there aren't any shared accessibility tests
