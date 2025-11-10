@@ -1,0 +1,57 @@
+name: Cleanup E2E Test Data
+
+on:
+  workflow_call:
+    inputs:
+      env_name:
+        description: 'Environment to cleanup (E2E tests run in dev/test/uat)'
+        required: true
+        type: string
+    secrets:
+      AWS_ACCOUNT:
+        required: true
+      FS_BASIC_AUTH_USERNAME:
+        required: true
+      FS_BASIC_AUTH_PASSWORD:
+        required: true
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to cleanup (E2E tests run in dev/test/uat)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - uat
+
+jobs:
+  cleanup-e2e-data:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment: ${{ inputs.env_name || github.event.inputs.environment }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/GithubCopilotDeploy
+          role-session-name: "cleanup_e2e_data_${{ inputs.env_name || github.event.inputs.environment }}"
+          aws-region: eu-west-2
+
+      - name: Cleanup E2E Test Data
+        run: |
+          curl -X POST \
+            -u "${{ secrets.FS_BASIC_AUTH_USERNAME }}:${{ secrets.FS_BASIC_AUTH_PASSWORD }}" \
+            -H "User-Agent: github-actions" \
+            -H "X-GitHub-Actions: cleanup-e2e" \
+            -H "Content-Type: application/json" \
+            "https://apply.access-funding.${{ inputs.env_name || github.event.inputs.environment }}.communities.gov.uk/utils/cleanup-e2e-data" \
+            --fail-with-body && echo "✅ E2E cleanup completed successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "E2E cleanup failed. Check logs for details."
