@@ -1,0 +1,59 @@
+name: Cleanup E2E Test Data
+
+on:
+  workflow_call:
+    inputs:
+      env_name:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCOUNT:
+        required: true
+
+jobs:
+  cleanup_e2e_data:
+    name: Cleanup E2E Test Data
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    environment: ${{ inputs.env_name }}
+    if: ${{ inputs.env_name == 'dev' }}
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/GithubCopilotDeploy
+        role-session-name: "cleanup-e2e-${{ inputs.env_name }}-${{ github.run_id }}"
+        aws-region: eu-west-2
+
+    - name: Install AWS Copilot CLI
+      run: |
+        curl -Lo aws-copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x aws-copilot && sudo mv aws-copilot /usr/local/bin/copilot
+
+    - name: Cleanup E2E test data
+      run: |
+        echo "Cleaning up E2E test data in ${{ inputs.env_name }} environment..."
+        
+        # Get the service URL
+        SERVICE_URL=$(copilot svc show --app pre-award --name fsd-pre-award --env ${{ inputs.env_name }} --json | jq -r '.routes[0].url')
+        
+        # Call the cleanup endpoint
+        RESPONSE=$(curl -s -X POST "${SERVICE_URL}/utils/cleanup-e2e-data" \
+          -H "Content-Type: application/json" \
+          -w "HTTP_STATUS:%{http_code}")
+        
+        HTTP_STATUS=$(echo $RESPONSE | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
+        BODY=$(echo $RESPONSE | sed 's/HTTP_STATUS:[0-9]*$//')
+        
+        echo "HTTP Status: $HTTP_STATUS"
+        echo "Response: $BODY"
+        
+        if [ "$HTTP_STATUS" -eq 200 ]; then
+          echo "✅ E2E cleanup completed successfully"
+          echo "$BODY" | jq .
+        else
+          echo "❌ E2E cleanup failed"
+          exit 1
+        fi

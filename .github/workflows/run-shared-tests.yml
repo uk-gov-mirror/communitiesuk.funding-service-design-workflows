@@ -266,7 +266,6 @@ jobs:
         id: unique_id
         run: |
           echo "unique_id=$(date +%s)" >> $GITHUB_OUTPUT
-
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
@@ -290,6 +289,16 @@ jobs:
           name: performance-test-report-${{inputs.env_name}}-${{ steps.unique_id.outputs.unique_id }}
           path: ./funding-service-design-performance-tests/locust_html_report.html
           retention-days: 5
+
+  cleanup_e2e_data:
+    name: Cleanup E2E Test Data
+    if: ${{ always() && inputs.env_name == 'dev' }}
+    needs: [run_application_e2e_test, run_python_e2e_test, run_assessment_e2e_test, run_performance_tests]
+    uses: ./.github/workflows/cleanup-e2e-data.yml
+    with:
+      env_name: ${{ inputs.env_name }}
+    secrets:
+      AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
 
 
 # Commented out as there aren't any shared accessibility tests
