@@ -291,7 +291,7 @@ jobs:
           retention-days: 5
   cleanup_e2e_data:
     name: Cleanup E2E Test Data
-    if: ${{ always() && inputs.env_name == 'dev' }}
+    if: ${{ always() && (inputs.env_name == 'dev' || inputs.env_name == 'test' || inputs.env_name == 'uat') }}
     needs: [ run_application_e2e_test, run_python_e2e_test, run_assessment_e2e_test, run_performance_tests ]
     uses: ./.github/workflows/cleanup-e2e-data.yml
     with:
