@@ -43,13 +43,29 @@ jobs:
 
       - name: Cleanup E2E Test Data
         run: |
-          curl -X POST \
+          echo "Starting E2E test data cleanup..."
+          response=$(curl -s -w "\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}" \
+            -X POST \
             -u "${{ secrets.FS_BASIC_AUTH_USERNAME }}:${{ secrets.FS_BASIC_AUTH_PASSWORD }}" \
             -H "User-Agent: github-actions" \
             -H "X-GitHub-Actions: cleanup-e2e" \
             -H "Content-Type: application/json" \
-            "https://apply.access-funding.${{ inputs.env_name || github.event.inputs.environment }}.communities.gov.uk/utils/e2e-test-data/cleanup" \
-            --fail-with-body && echo "✅ E2E cleanup completed successfully"
+            "https://apply.access-funding.${{ inputs.env_name || github.event.inputs.environment }}.communities.gov.uk/utils/e2e-test-data/cleanup")
+          
+          echo "Cleanup Response:"
+          echo "$response" | grep -v "HTTP_STATUS\|TIME_TOTAL"
+          
+          http_status=$(echo "$response" | grep "HTTP_STATUS" | cut -d: -f2)
+          time_total=$(echo "$response" | grep "TIME_TOTAL" | cut -d: -f2)
+          
+          echo "Status: $http_status | Time: ${time_total}s"
+          
+          if [ "$http_status" -eq 200 ]; then
+            echo "E2E cleanup completed successfully"
+          else
+            echo "E2E cleanup failed with status $http_status"
+            exit 1
+          fi
 
       - name: Notify on failure
         if: failure()
