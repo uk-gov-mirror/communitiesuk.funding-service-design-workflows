@@ -18,14 +18,11 @@ on:
         required: false
         default: false
         type: boolean
-      run_e2e_tests_application:
+      run_e2e_tests:
         required: false
-        default: true
+        default: false
         type: boolean
-      run_e2e_tests_assessment:
-        required: false
-        default: true
-        type: boolean
+        description: Run e2e tests (python)
       run_static_security_python:
         required: false
         default: true
@@ -81,14 +78,11 @@ on:
         required: false
         default: false
         type: boolean
-      run_e2e_tests_application:
+      run_e2e_tests:
         required: false
         default: false
         type: boolean
-      run_e2e_tests_assessment:
-        required: false
-        default: false
-        type: boolean
+        description: Run e2e tests (python)
       run_static_security_python:
         required: false
         default: false
@@ -113,9 +107,7 @@ jobs:
     with:
       # run_performance_tests: ${{inputs.run_performance_tests}}
       run_performance_tests: false
-      run_e2e_tests_assessment: ${{inputs.run_e2e_tests_assessment}}
-      run_e2e_tests_application: ${{inputs.run_e2e_tests_application}}
-      run_e2e_tests_python: ${{ inputs.environment == 'dev' || inputs.environment == 'test' }}
+      run_e2e_tests: ${{ inputs.environment == 'dev' || inputs.environment == 'test' }}
       env_name: ${{inputs.environment}}
     secrets:
       FSD_GH_APP_ID: ${{ secrets.FSD_GH_APP_ID }}
